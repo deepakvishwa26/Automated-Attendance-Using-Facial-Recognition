@@ -78,34 +78,47 @@ export default function Register({ onNavigate }) {
     }
   };
 
+  const formatDate = () => {
+    return new Date().toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
+
   return (
-    <div className="animate-fade-in">
-      <button className="nav-back" onClick={() => onNavigate('home')}>
-        ← Back to Home
+    <div className="animate-fade-in" style={{ maxWidth: 640, margin: '0 auto' }}>
+      <button className="nav-back" onClick={() => onNavigate('dashboard')}>
+        ← Back to Dashboard
       </button>
 
-      <div className="app-header" style={{ marginBottom: '1.5rem' }}>
-        <h1>👤 Student Registration</h1>
-        <p>Enroll with your details and face capture</p>
+      <div className="page-header" style={{ marginBottom: '1rem' }}>
+        <h1 className="page-title">Register Student</h1>
+        <p className="page-subtitle">Enroll with student details and face capture.</p>
       </div>
 
-      {/* Progress indicator */}
-      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginBottom: '2rem' }}>
-        {[1, 2, 3].map(s => (
-          <div
-            key={s}
-            className={`status-badge ${s === step ? 'status-info' : s < step ? 'status-success' : ''}`}
-            style={{ opacity: s > step ? 0.3 : 1 }}
-          >
-            {s === 1 ? '① Details' : s === 2 ? '② Face Capture' : '③ Complete'}
-          </div>
-        ))}
+      {/* Progress Steps */}
+      <div className="progress-steps">
+        <div className={`progress-step ${step === 1 ? 'active' : step > 1 ? 'done' : ''}`}>
+          <div className="progress-step-number">{step > 1 ? '✓' : '1'}</div>
+          Details
+        </div>
+        <div className={`progress-step-connector ${step > 1 ? 'done' : ''}`} />
+        <div className={`progress-step ${step === 2 ? 'active' : step > 2 ? 'done' : ''}`}>
+          <div className="progress-step-number">{step > 2 ? '✓' : '2'}</div>
+          Face Capture
+        </div>
+        <div className={`progress-step-connector ${step > 2 ? 'done' : ''}`} />
+        <div className={`progress-step ${step === 3 ? 'active' : ''}`}>
+          <div className="progress-step-number">3</div>
+          Complete
+        </div>
       </div>
 
       {/* Error display */}
       {error && (
         <div className="alert alert-error">
-          <span>⚠️</span>
+          <span>⚠</span>
           <span>{error}</span>
         </div>
       )}
@@ -121,7 +134,7 @@ export default function Register({ onNavigate }) {
                 className="form-input"
                 type="text"
                 name="student_id"
-                placeholder="e.g. TEST001"
+                placeholder="e.g. 23CS001"
                 value={formData.student_id}
                 onChange={handleChange}
               />
@@ -134,7 +147,7 @@ export default function Register({ onNavigate }) {
                 className="form-input"
                 type="text"
                 name="name"
-                placeholder="e.g. John Doe"
+                placeholder="e.g. Deepak Vishwa"
                 value={formData.name}
                 onChange={handleChange}
               />
@@ -185,7 +198,7 @@ export default function Register({ onNavigate }) {
           <button
             className="btn btn-primary btn-lg btn-full"
             onClick={handleProceedToCamera}
-            style={{ marginTop: '1rem' }}
+            style={{ marginTop: '0.5rem' }}
           >
             Next → Capture Face
           </button>
@@ -195,16 +208,18 @@ export default function Register({ onNavigate }) {
       {/* Step 2: Face Capture */}
       {step === 2 && (
         <div className="card animate-slide-up">
-          <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
-            <h3 style={{ fontWeight: 600, marginBottom: '0.25rem' }}>Capture Your Face</h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-              Look directly at the camera and position your face within the guide
+          <div style={{ textAlign: 'center', marginBottom: '0.75rem' }}>
+            <h3 style={{ fontWeight: 600, fontSize: '1.125rem', marginBottom: '0.25rem', color: 'var(--text-primary)' }}>
+              Capture Your Face
+            </h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+              Look directly at the camera and position your face within the guide.
             </p>
           </div>
 
           <Camera onCapture={handleCapture} isActive={step === 2} />
 
-          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
             <button
               className="btn btn-outline"
               onClick={() => { setStep(1); setFaceImage(null); }}
@@ -223,7 +238,7 @@ export default function Register({ onNavigate }) {
                   Registering...
                 </>
               ) : (
-                '✓ Register Student'
+                'Register Student'
               )}
             </button>
           </div>
@@ -232,34 +247,44 @@ export default function Register({ onNavigate }) {
 
       {/* Step 3: Success */}
       {step === 3 && result && (
-        <div className="card result-card result-success animate-slide-up">
-          <div className="result-icon">🎉</div>
-          <div className="result-title">Registration Successful!</div>
+        <div className="card result-card animate-slide-up">
+          <div className="result-icon success">✓</div>
+          <div className="result-title">Registration Successful</div>
           <div className="result-message">{result.message}</div>
 
           {result.student && (
-            <div style={{
-              background: 'rgba(255,255,255,0.03)',
-              borderRadius: 'var(--radius-md)',
-              padding: '1rem',
-              marginBottom: '1.5rem',
-              textAlign: 'left'
-            }}>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>STUDENT INFO</div>
-              <div><strong>ID:</strong> {result.student.student_id}</div>
-              <div><strong>Name:</strong> {result.student.name}</div>
-              <div><strong>Department:</strong> {result.student.department}</div>
-              <div><strong>Year:</strong> {result.student.year}</div>
-              {result.student.email && <div><strong>Email:</strong> {result.student.email}</div>}
+            <div className="result-details">
+              <div className="result-detail-row">
+                <span className="result-detail-label">Name</span>
+                <span className="result-detail-value">{result.student.name}</span>
+              </div>
+              <div className="result-detail-row">
+                <span className="result-detail-label">Student ID</span>
+                <span className="result-detail-value">{result.student.student_id}</span>
+              </div>
+              <div className="result-detail-row">
+                <span className="result-detail-label">Department</span>
+                <span className="result-detail-value">{result.student.department}</span>
+              </div>
+              <div className="result-detail-row">
+                <span className="result-detail-label">Year</span>
+                <span className="result-detail-value">{result.student.year}</span>
+              </div>
+              {result.student.email && (
+                <div className="result-detail-row">
+                  <span className="result-detail-label">Email</span>
+                  <span className="result-detail-value">{result.student.email}</span>
+                </div>
+              )}
             </div>
           )}
 
           <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
             <button className="btn btn-primary" onClick={() => onNavigate('attendance')}>
-              Mark Attendance →
+              Mark Attendance
             </button>
-            <button className="btn btn-outline" onClick={() => onNavigate('home')}>
-              Home
+            <button className="btn btn-outline" onClick={() => onNavigate('dashboard')}>
+              Dashboard
             </button>
           </div>
         </div>

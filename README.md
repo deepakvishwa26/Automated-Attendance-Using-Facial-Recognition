@@ -6,17 +6,17 @@ A hackathon MVP for automated student attendance using facial recognition. Stude
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | React 18 + Vite 5 |
+| Frontend | React 18 + Vite 4 |
 | Backend | Python 3.11 + FastAPI |
 | Database | SQLite (via SQLAlchemy) |
-| Face Recognition | DeepFace (VGG-Face model) + OpenCV |
+| Face Recognition | OpenCV 5 DNN (YuNet detector + SFace embeddings) |
 
 ## Features
 
 - **Student Registration**: Form + webcam face capture → stores face embedding
 - **Attendance Marking**: Student ID + face verification → marks attendance with timestamp
 - **Duplicate Prevention**: Only one attendance record per student per day
-- **Real Face Verification**: Uses actual face embeddings and cosine similarity comparison
+- **Real Face Verification**: Uses 128-dim deep learning face embeddings and cosine similarity
 
 ## Quick Start
 
@@ -24,6 +24,14 @@ A hackathon MVP for automated student attendance using facial recognition. Stude
 - Python 3.10+
 - Node.js 16+
 - Webcam
+
+### Download Models (run once)
+
+```bash
+python download_models.py
+```
+
+This downloads the YuNet face detector (~211KB) and SFace recognizer (~37MB) ONNX models.
 
 ### Backend Setup
 
@@ -63,7 +71,7 @@ Frontend runs at: http://localhost:5173
 │   │   ├── models/         # ORM models
 │   │   ├── schemas/        # Pydantic schemas
 │   │   ├── services/       # Business logic
-│   │   │   ├── face_service.py       # Face recognition (DeepFace)
+│   │   │   ├── face_service.py       # Face recognition (OpenCV 5 DNN)
 │   │   │   ├── student_service.py    # Student registration
 │   │   │   └── attendance_service.py # Attendance + verification
 │   │   └── main.py         # FastAPI app entry point

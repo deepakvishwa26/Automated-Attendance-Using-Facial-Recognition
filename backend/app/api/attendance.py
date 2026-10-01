@@ -3,10 +3,13 @@ Attendance API Routes
 =====================
 POST /api/attendance/verify - Verify a student's face
 POST /api/attendance/mark   - Mark attendance after successful verification
+GET  /api/attendance/records - List attendance records with filters
 GET  /api/attendance/{student_id} - Get attendance history
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from typing import Optional
+from datetime import date as date_type
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from ..database import get_db
 from ..schemas import (
@@ -18,8 +21,55 @@ from ..schemas import (
     StudentResponse,
 )
 from ..services import attendance_service
+from ..models.models import Student, Attendance as AttendanceModel
 
 router = APIRouter(prefix="/api/attendance", tags=["attendance"])
+
+
+@router.get("/records")
+def list_attendance_records(
+    search: Optional[str] = Query(None),
+    record_date: Optional[str] = Query(None),
+    department: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    """List attendance records with optional filters."""
+    query = (
+        db.query(AttendanceModel, Student)
+        .outerjoin(Student, AttendanceModel.student_id == Student.student_id)
+    )
+
+    if record_date:
+        try:
+            d = date_type.fromisoformat(record_date)
+            query = query.filter(AttendanceModel.date == d)
+        except ValueError:
+            pass
+
+    if department:
+        query = query.filter(Student.department == department)
+
+    if search:
+        search_term = f"%{search}%"
+        query = query.filter(
+            (Student.name.ilike(search_term)) | (AttendanceModel.student_id.ilike(search_term))
+        )
+
+    records = query.order_by(AttendanceModel.date.desc(), AttendanceModel.time.desc()).all()
+
+    return [
+        {
+            "id": a.id,
+            "student_id": a.student_id,
+            "name": s.name if s else "Unknown",
+            "department": s.department if s else "—",
+            "date": a.date.isoformat(),
+            "time": a.time.strftime("%I:%M %p"),
+            "status": a.status,
+            "confidence": a.confidence,
+        }
+        for a, s in records
+    ]
 
 
 @router.post("/verify", response_model=VerificationResult)

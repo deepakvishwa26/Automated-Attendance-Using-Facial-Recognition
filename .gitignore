@@ -20,6 +20,9 @@ env/
 captured_faces/
 face_data/
 *.pkl
+*.onnx
+backend/models/
+backend/data/
 
 # Node
 node_modules/

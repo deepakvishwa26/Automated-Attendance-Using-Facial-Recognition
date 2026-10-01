@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, Float, Date, Time, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Text, DateTime, Float, Date, Time, Boolean, UniqueConstraint
 from sqlalchemy.sql import func
 from ..database.database import Base
 
@@ -35,3 +35,31 @@ class Attendance(Base):
 
     def __repr__(self):
         return f"<Attendance(student_id={self.student_id}, date={self.date})>"
+
+
+class StudentPreference(Base):
+    __tablename__ = "student_preferences"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    student_id = Column(String(50), unique=True, nullable=False, index=True)
+    attendance_target = Column(Integer, nullable=False, default=75)
+    alerts_enabled = Column(Boolean, nullable=False, default=True)
+
+    def __repr__(self):
+        return f"<StudentPreference(student_id={self.student_id}, target={self.attendance_target})>"
+
+
+class Admin(Base):
+    __tablename__ = "admins"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    admin_id = Column(String(50), unique=True, nullable=False, index=True)
+    email = Column(String(100), unique=True, nullable=False)
+    password_hash = Column(String(256), nullable=False)
+    name = Column(String(100), nullable=False, default="Admin")
+    created_at = Column(DateTime, server_default=func.now())
+
+    def __repr__(self):
+        return f"<Admin(admin_id={self.admin_id}, email={self.email})>"
+
+

@@ -134,7 +134,7 @@ export default function Camera({ onCapture, isActive = false, statusText = '' })
         {/* Loading state */}
         {!cameraReady && !captured && !error && isActive && (
           <div className="loading-overlay">
-            <div className="spinner spinner-lg" style={{ borderTopColor: 'var(--primary-400)' }}></div>
+            <div className="spinner spinner-lg"></div>
             <span>Starting camera...</span>
           </div>
         )}
@@ -142,8 +142,8 @@ export default function Camera({ onCapture, isActive = false, statusText = '' })
         {/* Error state */}
         {error && (
           <div className="loading-overlay">
-            <span style={{ fontSize: '2rem' }}>📷</span>
-            <span style={{ color: 'var(--danger-500)', textAlign: 'center', padding: '0 1rem' }}>{error}</span>
+            <span style={{ fontSize: '1.5rem' }}>📷</span>
+            <span style={{ color: 'var(--error)', textAlign: 'center', padding: '0 1rem', fontSize: '0.875rem' }}>{error}</span>
           </div>
         )}
 
@@ -163,7 +163,7 @@ export default function Camera({ onCapture, isActive = false, statusText = '' })
 
         {/* Captured badge */}
         {captured && (
-          <div className="camera-status" style={{ background: 'rgba(16, 185, 129, 0.85)' }}>
+          <div className="camera-status" style={{ background: 'rgba(69, 182, 73, 0.85)' }}>
             ✓ Face captured
           </div>
         )}
@@ -173,20 +173,20 @@ export default function Camera({ onCapture, isActive = false, statusText = '' })
       <canvas ref={canvasRef} style={{ display: 'none' }} />
 
       {/* Action buttons */}
-      <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', marginTop: '1rem' }}>
+      <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', marginTop: '0.75rem' }}>
         {cameraReady && !captured && (
           <button className="btn btn-primary btn-lg" onClick={captureFrame}>
-            📸 Capture Face
+            Capture Face
           </button>
         )}
         {captured && (
           <button className="btn btn-outline" onClick={retake}>
-            🔄 Retake
+            Retake
           </button>
         )}
         {error && (
           <button className="btn btn-outline" onClick={startCamera}>
-            🔄 Retry Camera
+            Retry Camera
           </button>
         )}
       </div>

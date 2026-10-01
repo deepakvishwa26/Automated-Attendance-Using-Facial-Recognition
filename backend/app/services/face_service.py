@@ -1,122 +1,152 @@
 """
 Face Recognition Service
 ========================
-Isolated face-recognition logic using DeepFace.
-This module can be replaced with any other face-recognition backend
-without changing the rest of the application.
+Isolated face-recognition logic using OpenCV 5's DNN-based face detection
+and recognition models.
 
-Uses:
-  - DeepFace with the "VGG-Face" model (default) for generating embeddings
-  - Cosine similarity for comparing face embeddings
-  - OpenCV for face detection as a quick pre-check
+Models used:
+  - YuNet (face_detection_yunet_2023mar.onnx) — fast DNN face detector
+  - SFace (face_recognition_sface_2021dec.onnx) — 128-dim face embedding
+
+This module can be replaced with DeepFace, InsightFace, or any other
+face-recognition backend without changing the rest of the application.
 """
 
 import base64
 import json
+import os
 import numpy as np
 import cv2
 from io import BytesIO
 from PIL import Image
 from typing import Optional, Tuple
 
-# DeepFace import — will be lazily loaded
-_deepface = None
+# ─── Configuration ──────────────────────────────────────────
+# Cosine similarity threshold. Higher = stricter.
+VERIFICATION_THRESHOLD = 0.363  # SFace recommended threshold for cosine
 
-# Configurable threshold for face verification
-VERIFICATION_THRESHOLD = 0.60  # cosine similarity; higher = stricter
+# Model paths
+MODELS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
+    os.path.abspath(__file__)))), "models")
+
+YUNET_MODEL = os.path.join(MODELS_DIR, "face_detection_yunet_2023mar.onnx")
+SFACE_MODEL = os.path.join(MODELS_DIR, "face_recognition_sface_2021dec.onnx")
+
+# ─── Lazy-loaded models ────────────────────────────────────
+_face_detector = None
+_face_recognizer = None
 
 
-def _get_deepface():
-    """Lazy-load DeepFace to avoid slow startup."""
-    global _deepface
-    if _deepface is None:
-        from deepface import DeepFace
-        _deepface = DeepFace
-    return _deepface
+def _get_face_detector(input_size=(320, 320)):
+    """Get or create the YuNet face detector."""
+    global _face_detector
+    if _face_detector is None:
+        if not os.path.exists(YUNET_MODEL):
+            raise FileNotFoundError(
+                f"YuNet model not found at {YUNET_MODEL}. "
+                "Please download from: https://github.com/opencv/opencv_zoo"
+            )
+        _face_detector = cv2.FaceDetectorYN_create(
+            YUNET_MODEL, "", input_size, 0.6, 0.3, 5000
+        )
+    return _face_detector
+
+
+def _get_face_recognizer():
+    """Get or create the SFace face recognizer."""
+    global _face_recognizer
+    if _face_recognizer is None:
+        if not os.path.exists(SFACE_MODEL):
+            raise FileNotFoundError(
+                f"SFace model not found at {SFACE_MODEL}. "
+                "Please download from: https://github.com/opencv/opencv_zoo"
+            )
+        _face_recognizer = cv2.FaceRecognizerSF_create(SFACE_MODEL, "")
+    return _face_recognizer
 
 
 def _decode_base64_image(base64_string: str) -> np.ndarray:
-    """Decode a base64-encoded image string to an OpenCV numpy array."""
-    # Strip data URI prefix if present
+    """Decode a base64-encoded image string to an OpenCV numpy array (BGR)."""
     if "," in base64_string:
         base64_string = base64_string.split(",", 1)[1]
 
     image_bytes = base64.b64decode(base64_string)
     pil_image = Image.open(BytesIO(image_bytes)).convert("RGB")
     cv_image = np.array(pil_image)
-    # Convert RGB to BGR for OpenCV
     cv_image = cv2.cvtColor(cv_image, cv2.COLOR_RGB2BGR)
     return cv_image
 
 
-def _detect_face(image: np.ndarray) -> bool:
-    """Quick check: is there a face in the image using OpenCV Haar cascades?"""
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    face_cascade = cv2.CascadeClassifier(
-        cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
-    )
-    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(80, 80))
-    return len(faces) > 0
+def _detect_face(image: np.ndarray):
+    """
+    Detect faces using YuNet.
+    Returns the detection result for the largest face, or None.
+    """
+    h, w = image.shape[:2]
+    detector = _get_face_detector()
+    detector.setInputSize((w, h))
+
+    _, faces = detector.detect(image)
+
+    if faces is None or len(faces) == 0:
+        return None
+
+    # Return the face with highest confidence (last column is score)
+    best_idx = np.argmax(faces[:, -1])
+    return faces[best_idx]
+
+
+def _align_and_crop_face(image: np.ndarray, face_detection) -> np.ndarray:
+    """
+    Align and crop a face using the SFace recognizer's alignment.
+    """
+    recognizer = _get_face_recognizer()
+    aligned = recognizer.alignCrop(image, face_detection)
+    return aligned
 
 
 def generate_embedding(base64_image: str) -> Optional[list]:
     """
-    Generate a face embedding vector from a base64-encoded image.
+    Generate a 128-dimensional face embedding from a base64-encoded image.
 
     Returns:
-        List of floats (the embedding vector), or None if no face detected.
+        List of floats (128-dim embedding), or None if no face detected.
     """
     image = _decode_base64_image(base64_image)
+    face = _detect_face(image)
 
-    # Quick face detection check
-    if not _detect_face(image):
+    if face is None:
         return None
 
-    DeepFace = _get_deepface()
+    # Align and crop the face
+    aligned_face = _align_and_crop_face(image, face)
 
-    try:
-        # Generate embedding using DeepFace
-        embeddings = DeepFace.represent(
-            img_path=image,
-            model_name="VGG-Face",
-            enforce_detection=False,
-            detector_backend="opencv",
-        )
+    # Generate 128-dim embedding
+    recognizer = _get_face_recognizer()
+    embedding = recognizer.feature(aligned_face)
 
-        if embeddings and len(embeddings) > 0:
-            return embeddings[0]["embedding"]
-        return None
-
-    except Exception as e:
-        print(f"[FaceService] Error generating embedding: {e}")
-        return None
+    # Convert to list for JSON serialization
+    return embedding.flatten().tolist()
 
 
 def compare_embeddings(
     embedding1: list, embedding2: list
 ) -> Tuple[bool, float]:
     """
-    Compare two face embeddings using cosine similarity.
+    Compare two face embeddings using cosine similarity via SFace.
 
     Returns:
         Tuple of (is_match: bool, similarity: float)
     """
-    vec1 = np.array(embedding1, dtype=np.float64)
-    vec2 = np.array(embedding2, dtype=np.float64)
+    vec1 = np.array(embedding1, dtype=np.float32).reshape(1, -1)
+    vec2 = np.array(embedding2, dtype=np.float32).reshape(1, -1)
 
-    # Cosine similarity
-    dot_product = np.dot(vec1, vec2)
-    norm1 = np.linalg.norm(vec1)
-    norm2 = np.linalg.norm(vec2)
+    recognizer = _get_face_recognizer()
+    # Use cosine distance
+    score = recognizer.match(vec1, vec2, cv2.FACE_RECOGNIZER_SF_FR_COSINE)
 
-    if norm1 == 0 or norm2 == 0:
-        return False, 0.0
-
-    similarity = dot_product / (norm1 * norm2)
-    similarity = float(similarity)
-
-    is_match = similarity >= VERIFICATION_THRESHOLD
-    return is_match, similarity
+    is_match = score >= VERIFICATION_THRESHOLD
+    return is_match, float(score)
 
 
 def verify_face(
@@ -130,17 +160,13 @@ def verify_face(
         stored_embedding_json: JSON string of the stored embedding vector
 
     Returns:
-        Tuple of (is_match: bool, confidence: float)
+        Tuple of (is_match: bool, confidence/similarity: float)
     """
-    # Generate embedding for the new image
     new_embedding = generate_embedding(base64_image)
     if new_embedding is None:
         return False, 0.0
 
-    # Parse the stored embedding
     stored_embedding = json.loads(stored_embedding_json)
-
-    # Compare
     return compare_embeddings(new_embedding, stored_embedding)
 
 

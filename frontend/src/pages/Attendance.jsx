@@ -94,28 +94,44 @@ export default function Attendance({ onNavigate }) {
     setHistory([]);
   };
 
+  const formatDate = () => {
+    return new Date().toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
+
+  const formatTime = () => {
+    return new Date().toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+  };
+
   return (
-    <div className="animate-fade-in">
-      <button className="nav-back" onClick={() => onNavigate('home')}>
-        ← Back to Home
+    <div className="animate-fade-in" style={{ maxWidth: 640, margin: '0 auto' }}>
+      <button className="nav-back" onClick={() => onNavigate('dashboard')}>
+        ← Back to Dashboard
       </button>
 
-      <div className="app-header" style={{ marginBottom: '1.5rem' }}>
-        <h1>✅ Mark Attendance</h1>
-        <p>Verify your identity to record attendance</p>
+      <div className="page-header" style={{ marginBottom: '1rem' }}>
+        <h1 className="page-title">Mark Attendance</h1>
+        <p className="page-subtitle">Verify your identity to record attendance.</p>
       </div>
 
       {/* Error display */}
       {error && (
         <div className="alert alert-error">
-          <span>⚠️</span>
+          <span>⚠</span>
           <span>{error}</span>
         </div>
       )}
 
       {/* Step 1: Enter Student ID */}
       {step === 1 && (
-        <div className="card animate-slide-up" style={{ maxWidth: 480, margin: '0 auto' }}>
+        <div className="card animate-slide-up">
           <div className="form-group">
             <label className="form-label" htmlFor="attendance-student-id">Student ID</label>
             <input
@@ -140,23 +156,23 @@ export default function Attendance({ onNavigate }) {
       {/* Step 2: Camera */}
       {step === 2 && (
         <div className="card animate-slide-up">
-          <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
-            <div className="status-badge status-info" style={{ marginBottom: '0.75rem' }}>
+          <div style={{ textAlign: 'center', marginBottom: '0.75rem' }}>
+            <div className="status-badge status-info" style={{ marginBottom: '0.5rem' }}>
               Student ID: {studentId}
             </div>
-            <h3 style={{ fontWeight: 600, marginBottom: '0.25rem' }}>
-              {verifying ? 'Verifying Identity...' : 'Look at the Camera'}
+            <h3 style={{ fontWeight: 600, fontSize: '1.125rem', marginBottom: '0.25rem', color: 'var(--text-primary)' }}>
+              {verifying ? 'Verifying Identity...' : 'Verify Your Identity'}
             </h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
               {verifying
                 ? 'Please wait while we verify your face...'
-                : 'Position your face and capture to verify'}
+                : 'Position your face and capture to verify.'}
             </p>
           </div>
 
           {verifying && (
             <div className="loading-overlay">
-              <div className="spinner spinner-lg" style={{ borderTopColor: 'var(--primary-400)' }}></div>
+              <div className="spinner spinner-lg"></div>
               <span>Analyzing face and verifying identity...</span>
             </div>
           )}
@@ -169,7 +185,7 @@ export default function Attendance({ onNavigate }) {
             />
           )}
 
-          <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+          <div style={{ textAlign: 'center', marginTop: '0.75rem' }}>
             <button className="btn btn-outline" onClick={() => { setStep(1); setError(null); }}>
               ← Back
             </button>
@@ -182,33 +198,33 @@ export default function Attendance({ onNavigate }) {
         <div className="animate-slide-up">
           {/* Success: Attendance Marked */}
           {result.type === 'marked' && (
-            <div className="card result-card result-success">
-              <div className="result-icon">🎉</div>
-              <div className="result-title">Attendance Marked!</div>
-              <div className="result-message">{result.message}</div>
-
-              <div style={{
-                display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '1rem'
-              }}>
-                <div className="status-badge status-success">
-                  ✓ Verified ({(result.confidence * 100).toFixed(1)}%)
-                </div>
-                <div className="status-badge status-info">
-                  📅 {result.attendance?.date}
-                </div>
-              </div>
+            <div className="card result-card">
+              <div className="result-icon success">✓</div>
+              <div className="result-title">Attendance Marked</div>
+              <div className="result-message">Your attendance has been recorded successfully.</div>
 
               {result.student && (
-                <div style={{
-                  background: 'rgba(255,255,255,0.03)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '1rem',
-                  marginBottom: '1.5rem',
-                  textAlign: 'left'
-                }}>
-                  <div><strong>Name:</strong> {result.student.name}</div>
-                  <div><strong>Department:</strong> {result.student.department}</div>
-                  <div><strong>Year:</strong> {result.student.year}</div>
+                <div className="result-details">
+                  <div className="result-detail-row">
+                    <span className="result-detail-label">Name</span>
+                    <span className="result-detail-value">{result.student.name}</span>
+                  </div>
+                  <div className="result-detail-row">
+                    <span className="result-detail-label">Student ID</span>
+                    <span className="result-detail-value">{studentId}</span>
+                  </div>
+                  <div className="result-detail-row">
+                    <span className="result-detail-label">Date</span>
+                    <span className="result-detail-value">{formatDate()}</span>
+                  </div>
+                  <div className="result-detail-row">
+                    <span className="result-detail-label">Time</span>
+                    <span className="result-detail-value">{formatTime()}</span>
+                  </div>
+                  <div className="result-detail-row">
+                    <span className="result-detail-label">Confidence</span>
+                    <span className="result-detail-value">{(result.confidence * 100).toFixed(1)}%</span>
+                  </div>
                 </div>
               )}
             </div>
@@ -216,53 +232,64 @@ export default function Attendance({ onNavigate }) {
 
           {/* Already Marked */}
           {result.type === 'already_marked' && (
-            <div className="card result-card" style={{ borderColor: 'rgba(245, 158, 11, 0.3)' }}>
-              <div className="result-icon">ℹ️</div>
-              <div className="result-title" style={{ color: 'var(--warning-500)' }}>
-                Already Marked
+            <div className="card result-card">
+              <div className="result-icon warning">!</div>
+              <div className="result-title">Already Marked</div>
+              <div className="result-message">
+                {result.message || 'Identity verified but attendance was already recorded today.'}
               </div>
-              <div className="result-message">{result.message}</div>
-              <div className="status-badge status-warning">
-                Identity verified but attendance was already recorded today
-              </div>
+              {result.student && (
+                <div className="result-details">
+                  <div className="result-detail-row">
+                    <span className="result-detail-label">Name</span>
+                    <span className="result-detail-value">{result.student.name}</span>
+                  </div>
+                  <div className="result-detail-row">
+                    <span className="result-detail-label">Confidence</span>
+                    <span className="result-detail-value">{(result.confidence * 100).toFixed(1)}%</span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
           {/* Verification Failed */}
           {result.type === 'verification_failed' && (
-            <div className="card result-card result-failure">
-              <div className="result-icon">❌</div>
+            <div className="card result-card">
+              <div className="result-icon error">✗</div>
               <div className="result-title">Verification Failed</div>
               <div className="result-message">{result.message}</div>
-              <div className="status-badge status-error">
-                Confidence: {(result.confidence * 100).toFixed(1)}%
+              <div className="result-details">
+                <div className="result-detail-row">
+                  <span className="result-detail-label">Confidence</span>
+                  <span className="result-detail-value">{(result.confidence * 100).toFixed(1)}%</span>
+                </div>
               </div>
             </div>
           )}
 
           {/* Actions */}
-          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', marginTop: '1.5rem' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', marginTop: '1rem', flexWrap: 'wrap' }}>
             {result.type === 'verification_failed' && (
               <button className="btn btn-primary" onClick={() => setStep(2)}>
-                🔄 Try Again
+                Try Again
               </button>
             )}
-            <button className="btn btn-outline" onClick={handleShowHistory}>
-              📋 View History
-            </button>
+            {(result.type === 'marked' || result.type === 'already_marked') && (
+              <button className="btn btn-primary" onClick={() => onNavigate('dashboard')}>
+                Done
+              </button>
+            )}
             <button className="btn btn-outline" onClick={handleReset}>
               New Attendance
-            </button>
-            <button className="btn btn-outline" onClick={() => onNavigate('home')}>
-              Home
             </button>
           </div>
 
           {/* History */}
           {showHistory && history.length > 0 && (
             <div className="card" style={{ marginTop: '1.5rem' }}>
-              <h3 style={{ fontWeight: 600, marginBottom: '1rem', fontSize: '1rem' }}>
-                📋 Attendance History for {studentId}
+              <h3 style={{ fontWeight: 600, marginBottom: '0.75rem', fontSize: '0.9375rem', color: 'var(--text-primary)' }}>
+                Attendance History — {studentId}
               </h3>
               <ul className="history-list">
                 {history.map(record => (
@@ -272,9 +299,7 @@ export default function Attendance({ onNavigate }) {
                       <div className="history-time">{record.time}</div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div className="status-badge status-success" style={{ fontSize: '0.7rem' }}>
-                        {record.status}
-                      </div>
+                      <span className="status-dot present">{record.status}</span>
                       {record.confidence && (
                         <div className="history-confidence">
                           {(record.confidence * 100).toFixed(1)}% match
@@ -288,8 +313,10 @@ export default function Attendance({ onNavigate }) {
           )}
 
           {showHistory && history.length === 0 && (
-            <div className="alert alert-info" style={{ marginTop: '1rem' }}>
-              No attendance records found for {studentId}.
+            <div className="card" style={{ marginTop: '1rem' }}>
+              <div className="empty-state" style={{ padding: '1.5rem' }}>
+                <div className="empty-state-message">No attendance records found for {studentId}.</div>
+              </div>
             </div>
           )}
         </div>
